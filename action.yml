@@ -1,0 +1,72 @@
+name: 'SPDX Checker'
+description: 'Check SPDX license identifiers in your project'
+author: 'Your Name'
+
+inputs:
+  target-license:
+    description: 'Target SPDX license identifier to check for'
+    required: false
+    default: ''
+  file-paths:
+    description: 'Comma-separated list of file paths to check. Leave empty to auto-detect from PR/push event.'
+    required: false
+    default: ''
+  extensions:
+    description: 'Comma-separated list of file extensions to check'
+    required: false
+    default: ''
+  exclude:
+    description: 'Comma-separated list of patterns to exclude'
+    required: false
+    default: ''
+  continue-on-error:
+    description: 'Continue checking even if errors are found'
+    required: false
+    default: 'false'
+  fix:
+    description: 'Automatically fix license headers'
+    required: false
+    default: 'false'
+
+outputs:
+  result:
+    description: 'Result of the SPDX check'
+    value: ${{ steps.spdx-check.outputs.result }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+    
+    - name: Get changed files
+      id: changed-files
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.file-paths }}" ]; then
+          echo "files=${{ inputs.file-paths }}" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          # Get files changed in PR
+          files=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tr '\n' ',' | sed 's/,$//')
+          echo "files=$files" >> $GITHUB_OUTPUT
+        else
+          # Get files changed in push
+          files=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.before }} ${{ github.sha }} 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo ".")
+          echo "files=$files" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Run SPDX Checker
+      id: spdx-check
+      shell: bash
+      run: |
+        uv run --with spdx_checker==0.1.20 python ${{ github.action_path }}/run_checker.py \
+          --target-license "${{ inputs.target-license }}" \
+          --file-paths "${{ steps.changed-files.outputs.files }}" \
+          --extensions "${{ inputs.extensions }}" \
+          --exclude "${{ inputs.exclude }}" \
+          --continue-on-error "${{ inputs.continue-on-error }}" \
+          --fix "${{ inputs.fix }}"
+      
+branding:
+  icon: 'shield'
+  color: 'blue'
