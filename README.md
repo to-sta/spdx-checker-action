@@ -7,7 +7,7 @@ A GitHub Action that checks SPDX license identifiers in your project files using
 
 ```yaml
 - name: Check SPDX Licenses
-  uses: your-username/spdx-checker-action@v1
+  uses: to-sta/spdx-checker-action@v0.0.1
   with:
     target-license: 'MIT'
     file-paths: 'src/,tests/'
