@@ -8,7 +8,7 @@ inputs:
     required: false
     default: ''
   file-paths:
-    description: 'Comma-separated list of file paths to check. Leave empty to auto-detect from PR/push event.'
+    description: 'Comma-separated list of file paths to check. Leave empty to auto-detect changed files in PR.'
     required: false
     default: ''
   extensions:
@@ -39,34 +39,38 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v7
     
+    - name: Install spdx_checker
+      shell: bash
+      run: |
+        uv venv
+        uv pip install spdx_checker==0.1.20
+    
     - name: Get changed files
       id: changed-files
+      uses: tj-actions/changed-files@v45
+      if: inputs.file-paths == ''
+      with:
+        separator: ','
+    
+    - name: Prepare file list
+      id: file-list
       shell: bash
       run: |
         if [ -n "${{ inputs.file-paths }}" ]; then
           echo "files=${{ inputs.file-paths }}" >> $GITHUB_OUTPUT
-        elif [ "${{ github.event_name }}" = "pull_request" ]; then
-          # Get files changed in PR
-          files=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tr '\n' ',' | sed 's/,$//')
-          echo "files=$files" >> $GITHUB_OUTPUT
         else
-          # Get files changed in push
-          files=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.before }} ${{ github.sha }} 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo ".")
-          echo "files=$files" >> $GITHUB_OUTPUT
+          echo "files=${{ steps.changed-files.outputs.all_changed_files }}" >> $GITHUB_OUTPUT
         fi
     
     - name: Run SPDX Checker
       id: spdx-check
       shell: bash
       run: |
-        uv run --with spdx_checker==0.1.20 python ${{ github.action_path }}/run_checker.py \
+        source .venv/bin/activate
+        python ${{ github.action_path }}/main.py \
           --target-license "${{ inputs.target-license }}" \
-          --file-paths "${{ steps.changed-files.outputs.files }}" \
+          --file-paths "${{ steps.file-list.outputs.files }}" \
           --extensions "${{ inputs.extensions }}" \
           --exclude "${{ inputs.exclude }}" \
           --continue-on-error "${{ inputs.continue-on-error }}" \
           --fix "${{ inputs.fix }}"
-      
-branding:
-  icon: 'shield'
-  color: 'blue'

@@ -7,11 +7,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       
       - name: Run SPDX Checker
         uses: ./
         with:
           target-license: 'MIT'
-          continue-on-error: 'false'
+          file-paths: 'tests/test_file.py'
+          continue-on-error: false
+          fix: false
+          extensions: 'py'
+          exclude: '**/__init__.py'
