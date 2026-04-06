@@ -48,19 +48,8 @@ runs:
     - name: Get changed files
       id: changed-files
       uses: tj-actions/changed-files@v45
-      if: inputs.file-paths == ''
       with:
         separator: ','
-    
-    - name: Prepare file list
-      id: file-list
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.file-paths }}" ]; then
-          echo "files=${{ inputs.file-paths }}" >> $GITHUB_OUTPUT
-        else
-          echo "files=${{ steps.changed-files.outputs.all_changed_files }}" >> $GITHUB_OUTPUT
-        fi
     
     - name: Run SPDX Checker
       id: spdx-check
@@ -69,7 +58,8 @@ runs:
         source .venv/bin/activate
         python ${{ github.action_path }}/main.py \
           --target-license "${{ inputs.target-license }}" \
-          --file-paths "${{ steps.file-list.outputs.files }}" \
+          --file-paths "${{ inputs.file-paths }}" \
+          --changed-files "${{ steps.changed-files.outputs.all_changed_files }}" \
           --extensions "${{ inputs.extensions }}" \
           --exclude "${{ inputs.exclude }}" \
           --continue-on-error "${{ inputs.continue-on-error }}" \
