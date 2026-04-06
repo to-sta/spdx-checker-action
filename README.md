@@ -11,7 +11,7 @@ A GitHub Action that checks SPDX license identifiers in your project files using
   with:
     target-license: 'MIT'
     file-paths: 'src/,tests/'
-    extensions: '.py,.js,.ts'
+    extensions: 'py,js,ts'
     exclude: 'vendor/,node_modules/'
     continue-on-error: true
     fix: false
